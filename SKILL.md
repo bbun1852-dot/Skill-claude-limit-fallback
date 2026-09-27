@@ -11,7 +11,7 @@ Claude 구독 한도(5시간·주간)가 바닥나 Claude Code 턴이 `rate_limi
 2. 대화 기록에서 **인계 파일**(최근 요청 4개, 최근 답변 6개, 수정한 파일 목록, 원본 기록 경로)을 만든다.
 3. 새 창("Claude via OmniRoute")에서 **새 세션**을 열고 "인계 파일을 읽고 이어서 하라"를 자동으로 보낸다.
    - 대화 전체를 이어받지(`--resume`) 않는다. 긴 세션은 무료 모델의 컨텍스트(codestral 128k)보다 커서 OmniRoute가 무료 모델을 건너뛰고 유료만 시도하다 실패한다(2026-09-26 실제 한도에서 확인).
-4. OmniRoute 콤보 `claude-fallback`이 무료 모델부터 순서대로 시도한다(codestral → OpenRouter 무료 → Gemini Flash → Groq → 유료).
+4. OmniRoute 콤보 `claude-fallback`이 무료 모델부터 순서대로 시도한다(nemotron → codestral → Gemini Flash → Groq → 유료).
 
 원래 대화는 건드리지 않는다. 같은 세션은 30분 안에 다시 띄우지 않고, 이미 OmniRoute 경유인 세션은 무시한다.
 수동 실행: 바탕화면 `Claude-OmniRoute.bat`.
@@ -51,6 +51,9 @@ Claude 구독 한도(5시간·주간)가 바닥나 Claude Code 턴이 `rate_limi
 - 훅이 띄우는 창은 `explorer.exe`로 연다. 앱 프로세스 트리(job)에 묶이면 세션과 같이 죽는다. OmniRoute 서버도 같은 이유로 `omniroute-serve.vbs`를 explorer로 연다.
 - `.cmd`·`.bat`은 ASCII만 쓴다(cmd가 OEM 코드페이지로 읽는다). 작업 폴더는 base64로 넘긴다.
 - `ArtifactData` 도구 스키마의 `prefixItems`를 Gemini 변환이 거부한다 → `--disallowedTools=ArtifactData`. `=` 없이 쓰면 목록 옵션이 뒤에 오는 프롬프트까지 도구 이름으로 삼켜 첫 메시지가 전송되지 않는다.
+- 작은 모델은 "파일을 읽고 이어서 하라"만 주면 읽지 않고 "이어서 하겠다"라고만 말하고 멈춘다 → 첫 메시지에 마지막 요청 원문을 넣고 "설명 말고 도구로 실행하라"를 붙인다.
+- 세션 시작 훅이 스킬 로드(task-observer 등)를 지시하면 무료 모델이 거기서 멈춘다 → 그런 훅은 `ANTHROPIC_BASE_URL`에 `:20128`이 있으면 건너뛰게 한다.
+- 콤보 1순위는 nemotron(OpenRouter 무료, 여러 단계 도구 사용이 더 안정적, 하루 50회), 2순위 codestral(한도 큼).
 - 무료 상류가 응답 없이 멈추는 경우가 있다 → 전환 세션은 `API_TIMEOUT_MS=120000`으로 2분 뒤 재시도한다.
 - 바탕화면 경로가 한글(`OneDrive\바탕 화면`)일 수 있다 → PowerShell 출력은 UTF-8로 받는다.
 - thinking-budget이 `auto`가 아니면 codestral이 `reasoning_effort is not enabled`로 거절한다.

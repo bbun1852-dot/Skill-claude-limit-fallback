@@ -8,8 +8,9 @@
     description: 'Claude limit fallback: free first, then paid',
     strategy: 'priority',
     models: [
-      'mistral/codestral-latest',
+      // nemotron first: better at multi-step tool use; codestral has the larger quota.
       'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
+      'mistral/codestral-latest',
       'openrouter/qwen/qwen3.8-27b:free',
       'gemini/gemini-3.8-flash',
       'groq/openai/gpt-oss-120b',

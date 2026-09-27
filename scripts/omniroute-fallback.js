@@ -32,6 +32,7 @@ const HANDOFF_MAX_CHARS = 24000;
 const MESSAGE_MAX_CHARS = 2000;
 const RECENT_USER_MESSAGES = 4;
 const RECENT_ASSISTANT_MESSAGES = 6;
+const LAST_REQUEST_MAX_CHARS = 1500;
 
 const b64 = (s) => Buffer.from(s, 'utf8').toString('base64');
 const unb64 = (s) => Buffer.from(s, 'base64').toString('utf8');
@@ -101,10 +102,19 @@ function clip(text) {
   return text.length > MESSAGE_MAX_CHARS ? `${text.slice(0, MESSAGE_MAX_CHARS)} ...(truncated)` : text;
 }
 
-function buildHandoff(sessionId, projectDir, transcriptPath) {
-  const entries = fs.readFileSync(transcriptPath, 'utf8').split('\n')
+function readTranscript(transcriptPath) {
+  return fs.readFileSync(transcriptPath, 'utf8').split('\n')
     .map((line) => { try { return JSON.parse(line); } catch { return null; } })
     .filter(Boolean);
+}
+
+function lastUserRequest(transcriptPath) {
+  const last = readTranscript(transcriptPath).filter(isUserRequest).pop();
+  return last ? textOf(last.message.content).trim().replace(/"/g, "'") : 'the task described in the handoff file';
+}
+
+function buildHandoff(sessionId, projectDir, transcriptPath) {
+  const entries = readTranscript(transcriptPath);
 
   const requests = entries.filter(isUserRequest).slice(-RECENT_USER_MESSAGES)
     .map((e) => `- ${clip(textOf(e.message.content).trim())}`);
@@ -170,9 +180,13 @@ async function runLauncher(sessionId, cwdArg, transcriptArg) {
   if (sessionId && transcriptPath && fs.existsSync(transcriptPath)) {
     const handoffFile = path.join(STATE_DIR, `${sessionId}-handoff.md`);
     fs.writeFileSync(handoffFile, buildHandoff(sessionId, cwd, transcriptPath));
+    // Put the last request in the prompt itself (kept short for cmd.exe's 8191-char limit):
+    // small models tend to acknowledge a pointer to a file and stop without opening it.
+    const lastRequest = lastUserRequest(transcriptPath).replace(/\s+/g, ' ').slice(0, LAST_REQUEST_MAX_CHARS);
     claudeArgs.push(
-      `The Claude subscription usage limit was reached and this new session runs through OmniRoute. ` +
-      `Read the handoff file ${handoffFile.replace(/\\/g, '/')} and continue the unfinished task it describes.`
+      `Continue this unfinished task now, using tools: "${lastRequest}" ` +
+      `(Claude's usage limit stopped the previous session; context is in ${handoffFile.replace(/\\/g, '/')}. ` +
+      'Do the work instead of only describing it.)'
     );
   }
   // Free upstreams sometimes stall a request without answering; retry after 2 minutes
