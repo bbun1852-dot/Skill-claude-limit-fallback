@@ -89,10 +89,11 @@ async function checkEndToEnd() {
   server.kill();
   report(`${r.stdout}${r.stderr}`.includes('429'), 'simulated usage limit returned 429');
 
-  // The hook forks the session into a new transcript in the same project folder.
+  // The fallback session writes a new transcript in the same project folder. Free models are
+  // slow and retry through the combo, so allow up to 15 minutes (measured: about 10).
   const slug = cwd.replace(/[^a-zA-Z0-9]/g, '-');
   const projectDir = path.join(CLAUDE_DIR, 'projects', slug);
-  const deadline = Date.now() + 5 * 60 * 1000;
+  const deadline = Date.now() + 15 * 60 * 1000;
   while (Date.now() < deadline) {
     await new Promise((res) => setTimeout(res, 5000));
     if (!fs.existsSync(projectDir)) continue;

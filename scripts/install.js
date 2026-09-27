@@ -24,7 +24,8 @@ const log = (status, msg) => console.log(`${status.padEnd(7)} ${msg}`);
 
 function desktopDir() {
   return opt('--desktop') ||
-    execSync('powershell -NoProfile -Command "[Environment]::GetFolderPath(\'Desktop\')"', { encoding: 'utf8' }).trim();
+    // UTF-8 output: the Desktop path can be non-ASCII (e.g. OneDrive\바탕 화면).
+    execSync('powershell -NoProfile -Command "[Console]::OutputEncoding=[Text.Encoding]::UTF8; [Environment]::GetFolderPath(\'Desktop\')"', { encoding: 'utf8' }).trim();
 }
 
 function ensureOmniRoute() {

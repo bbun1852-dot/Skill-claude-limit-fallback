@@ -8,8 +8,9 @@ description: "Claude 구독 한도(5시간·주간)를 다 쓰면 자동으로 O
 ## 이 스킬이 하는 일
 Claude 구독 한도(5시간·주간)가 바닥나 Claude Code 턴이 `rate_limit` 오류로 끝나는 순간:
 1. `StopFailure` 훅이 실행된다.
-2. 새 창("Claude via OmniRoute")이 뜨고, 방금 대화를 **복사해 이어받아**(`--resume --fork-session`) OmniRoute 경유로 연다.
-3. "중단된 작업을 이어서 계속하라"를 자동으로 보낸다.
+2. 대화 기록에서 **인계 파일**(최근 요청 4개, 최근 답변 6개, 수정한 파일 목록, 원본 기록 경로)을 만든다.
+3. 새 창("Claude via OmniRoute")에서 **새 세션**을 열고 "인계 파일을 읽고 이어서 하라"를 자동으로 보낸다.
+   - 대화 전체를 이어받지(`--resume`) 않는다. 긴 세션은 무료 모델의 컨텍스트(codestral 128k)보다 커서 OmniRoute가 무료 모델을 건너뛰고 유료만 시도하다 실패한다(2026-09-26 실제 한도에서 확인).
 4. OmniRoute 콤보 `claude-fallback`이 무료 모델부터 순서대로 시도한다(codestral → OpenRouter 무료 → Gemini Flash → Groq → 유료).
 
 원래 대화는 건드리지 않는다. 같은 세션은 30분 안에 다시 띄우지 않고, 이미 OmniRoute 경유인 세션은 무시한다.
@@ -49,9 +50,12 @@ Claude 구독 한도(5시간·주간)가 바닥나 Claude Code 턴이 `rate_limi
 ## 함정
 - 훅이 띄우는 창은 `explorer.exe`로 연다. 앱 프로세스 트리(job)에 묶이면 세션과 같이 죽는다. OmniRoute 서버도 같은 이유로 `omniroute-serve.vbs`를 explorer로 연다.
 - `.cmd`·`.bat`은 ASCII만 쓴다(cmd가 OEM 코드페이지로 읽는다). 작업 폴더는 base64로 넘긴다.
-- `ArtifactData` 도구 스키마의 `prefixItems`를 Gemini 변환이 거부한다 → `--disallowedTools ArtifactData`.
+- `ArtifactData` 도구 스키마의 `prefixItems`를 Gemini 변환이 거부한다 → `--disallowedTools=ArtifactData`. `=` 없이 쓰면 목록 옵션이 뒤에 오는 프롬프트까지 도구 이름으로 삼켜 첫 메시지가 전송되지 않는다.
+- 무료 상류가 응답 없이 멈추는 경우가 있다 → 전환 세션은 `API_TIMEOUT_MS=120000`으로 2분 뒤 재시도한다.
+- 바탕화면 경로가 한글(`OneDrive\바탕 화면`)일 수 있다 → PowerShell 출력은 UTF-8로 받는다.
 - thinking-budget이 `auto`가 아니면 codestral이 `reasoning_effort is not enabled`로 거절한다.
 - OmniRoute 서버가 꺼진 채 대시보드에서 키를 저장하면 저장되지 않는다. `omniroute providers list`로 확인한다.
 - 새 창은 대화형 CLI라, **한 번도 신뢰하지 않은 폴더(홈 폴더 포함)에서는 "폴더 신뢰" 확인을 기다린다**. 자리를 비운 상태라면 여기서 멈춘다.
 - 무료 모델은 Claude보다 답 품질이 낮다.
-- 미확인: 진짜 한도 응답, 그리고 데스크톱 앱 세션에서의 발생은 가짜 서버로 재현할 수 없다.
+- 실제 한도(2026-09-26)에서 CLI 세션과 데스크톱 앱 세션 모두 훅이 발생해 창이 뜨는 것을 확인했다.
+- 가짜 한도 E2E: 전환 세션이 인계 파일을 읽고 작업을 끝내기까지 약 10분 걸렸다. 콤보가 codestral에서 OpenRouter nemotron으로 넘어갔다.
