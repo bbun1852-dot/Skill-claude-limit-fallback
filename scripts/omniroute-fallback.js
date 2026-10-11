@@ -22,6 +22,8 @@ const COMBO = 'claude-fallback';
 const OMNIROUTE_PORT = 20128;
 const OMNIROUTE_CLI = path.join(process.env.APPDATA || '', 'npm', 'node_modules', 'omniroute', 'bin', 'omniroute.mjs');
 const STATE_DIR = path.join(os.homedir(), '.claude', 'hooks', 'omniroute-fallback');
+// Flag file: when present, hook mode does nothing (toggle with toggle.js).
+const DISABLED_FLAG = path.join(STATE_DIR, 'disabled');
 const DEBOUNCE_MS = 30 * 60 * 1000;
 const SERVER_WAIT_MS = 3 * 60 * 1000;
 const API_TIMEOUT_MS = 2 * 60 * 1000;
@@ -58,6 +60,7 @@ function recentlyLaunched(file) {
 async function runHook() {
   const input = JSON.parse(await readStdin());
   if (input.error !== 'rate_limit') return;
+  if (fs.existsSync(DISABLED_FLAG)) return;
   // Already running through OmniRoute: relaunching would loop.
   if ((process.env.ANTHROPIC_BASE_URL || '').includes(`:${OMNIROUTE_PORT}`)) return;
 

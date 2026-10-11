@@ -1,6 +1,6 @@
 ---
 name: claude-limit-fallback
-description: "Claude 구독 한도(5시간·주간)를 다 쓰면 자동으로 OmniRoute로 전환해 같은 대화를 무료/다른 AI로 이어가게 설치·점검한다. '토큰 다 쓰면 omniroute로', '한도 끝나면 자동 전환', 'claude limit fallback' 요청, 또는 이 설정이 동작하는지 확인할 때 사용. Windows + Claude Code 기준."
+description: "Claude 구독 한도(5시간·주간)를 다 쓰면 자동으로 OmniRoute로 전환해 같은 대화를 무료/다른 AI로 이어가게 설치·점검한다. '토큰 다 쓰면 omniroute로', '한도 끝나면 자동 전환', 'claude limit fallback' 요청, '폴백 끄기/켜기', 'fallback on/off', 또는 이 설정이 동작하는지 확인할 때 사용. Windows + Claude Code 기준."
 ---
 
 # claude-limit-fallback
@@ -16,11 +16,19 @@ Claude 구독 한도(5시간·주간)가 바닥나 Claude Code 턴이 `rate_limi
 원래 대화는 건드리지 않는다. 같은 세션은 30분 안에 다시 띄우지 않고, 이미 OmniRoute 경유인 세션은 무시한다.
 수동 실행: 바탕화면 `Claude-OmniRoute.bat`.
 
+## 켜기/끄기
+자동 전환만 끄고 켠다. 플래그 파일(`~/.claude/hooks/omniroute-fallback/disabled`)로 동작하며 `settings.json`은 건드리지 않는다.
+- 슬래시 명령: `/fallback off` · `/fallback on` · `/fallback` (상태). 정의: `commands/fallback.md`(install.js가 `~/.claude/commands/`로 복사)
+- `node scripts/toggle.js off|on|status`
+- 절대 경로: `node %USERPROFILE%\.claude\skills\claude-limit-fallback\scripts\toggle.js off`
+- off 상태에서는 `rate_limit`이 나도 훅이 아무것도 하지 않는다.
+- 바탕화면 `Claude-OmniRoute.bat` 수동 실행은 off여도 그대로 동작한다.
+
 ## 설치 (이 순서대로, 새로 조사하지 않는다)
 스크립트는 모두 이 스킬의 `scripts/`에 있다. 사람 몫은 `doorstep-handoff` 방식으로 넘긴다.
 
 1. **자동 설치**: `node scripts/install.js`
-   - OmniRoute가 없으면 npm으로 설치하고, 훅 스크립트를 `~/.claude/hooks/`에 복사한다.
+   - OmniRoute가 없으면 npm으로 설치하고, 훅 스크립트를 `~/.claude/hooks/`에, 슬래시 명령 `commands/fallback.md`를 `~/.claude/commands/`에 복사한다.
    - `settings.json`에 StopFailure 훅을 등록한다(백업을 만들고, 기존 설정은 보존).
    - 바탕화면 `.bat`을 만들고 OmniRoute 서버를 세션과 분리해 켠다.
    - 다시 실행해도 안전하다.

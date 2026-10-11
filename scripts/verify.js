@@ -43,6 +43,9 @@ function checkInstall() {
   report(JSON.stringify(settings.hooks?.StopFailure || []).includes('omniroute-fallback.js'), 'StopFailure hook registered');
   report(fs.existsSync(path.join(CLAUDE_DIR, 'hooks', 'omniroute-fallback.js')), 'hook script installed');
   report(fs.existsSync(OMNIROUTE_CLI), 'OmniRoute installed');
+  // Info only: OFF is a user choice, not a failure.
+  const off = fs.existsSync(path.join(CLAUDE_DIR, 'hooks', 'omniroute-fallback', 'disabled'));
+  console.log(`info  fallback switch ${off ? 'OFF (hook does nothing; node scripts/toggle.js on)' : 'ON'}`);
 }
 
 async function checkModels() {

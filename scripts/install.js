@@ -17,6 +17,8 @@ const CLAUDE_DIR = path.join(HOME, '.claude');
 const HOOK_SRC = path.join(__dirname, 'omniroute-fallback.js');
 const HOOK_DST = path.join(CLAUDE_DIR, 'hooks', 'omniroute-fallback.js');
 const SETTINGS = path.join(CLAUDE_DIR, 'settings.json');
+const CMD_SRC = path.join(__dirname, '..', 'commands', 'fallback.md');
+const CMD_DST = path.join(CLAUDE_DIR, 'commands', 'fallback.md');
 const OMNIROUTE_CLI = path.join(process.env.APPDATA || '', 'npm', 'node_modules', 'omniroute', 'bin', 'omniroute.mjs');
 const SERVE_VBS = path.join(__dirname, 'omniroute-serve.vbs');
 
@@ -42,6 +44,14 @@ function installHookScript() {
   if (same) return log('ok', `hook script up to date: ${HOOK_DST}`);
   fs.copyFileSync(HOOK_SRC, HOOK_DST);
   log('write', `hook script: ${HOOK_DST}`);
+}
+
+function installSlashCommand() {
+  fs.mkdirSync(path.dirname(CMD_DST), { recursive: true });
+  const same = fs.existsSync(CMD_DST) && fs.readFileSync(CMD_DST, 'utf8') === fs.readFileSync(CMD_SRC, 'utf8');
+  if (same) return log('ok', `slash command up to date: ${CMD_DST}`);
+  fs.copyFileSync(CMD_SRC, CMD_DST);
+  log('write', `slash command: ${CMD_DST}`);
 }
 
 function registerHook() {
@@ -101,6 +111,7 @@ async function ensureServer() {
 (async () => {
   ensureOmniRoute();
   installHookScript();
+  installSlashCommand();
   registerHook();
   writeShortcut();
   await ensureServer();
